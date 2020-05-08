@@ -1,0 +1,847 @@
+package IOCalc;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+import javafx.application.Application;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+import uNumberLibrary.EnhancedUNumber;
+import uNumberLibrary.InexactUNumber;
+
+/**
+ * Title: Floating Calculator Class.
+ * Description: A JavaFX demonstration application and baseline for other
+ * projects
+ * @author Amanda Martin
+ * 
+ * @version 2.00 Convert from Java Swing to JavaFX The goal of this one is to
+ *          combine convertoperands 1 and 2
+ */
+
+class Convert {
+	public boolean negative = false;
+	public EnhancedUNumber TheValue;
+
+	public boolean operandDefined = true;
+	public Label label_errOperand = new Label("");
+
+	public Convert() {
+
+	}
+
+	public Convert(String temp) {
+		if (temp.length() > 0 && temp.charAt(0) == '-')
+			TheValue = EnhancedUNumber.nextEnhancedUNumber(temp.substring(1), false);
+		else
+			TheValue = EnhancedUNumber.nextEnhancedUNumber(temp, true);
+		TheValue = new EnhancedUNumber(TheValue, 50);
+	}
+}
+
+public class Task2Solution extends Application {
+	// Constants used to parameterize the graphical user interface. We do not use a
+	// layout for
+	// this application. Rather we manually control the location of each graphical
+	// element.
+	Convert One = new Convert();
+	Convert Two = new Convert();
+	Convert OneErr = new Convert();
+	Convert TwoErr = new Convert();
+	Convert Size = new Convert();
+	Convert InResult = new Convert();
+	Convert InResultErr = new Convert();
+
+	private final double WINDOW_WIDTH = 600;
+	private final double WINDOW_HEIGHT = 400;
+	private final double BUTTON_SPACE = WINDOW_WIDTH / 6; // There are six gaps
+	private final double BUTTON_WIDTH = 60;;
+	private final double BUTTON_OFFSET = BUTTON_WIDTH / 2;
+
+	// These are the major application values not associated with the user interface
+	private EnhancedUNumber operand1;
+	private EnhancedUNumber inResultErr;
+	private EnhancedUNumber inResult;
+	private EnhancedUNumber operand2;
+	private EnhancedUNumber Erroperand1;
+	private EnhancedUNumber Erroperand2;
+	InexactUNumber Outresult;// create a new uNUmberMod to not overwrite operand 1
+	InexactUNumber Testresult;// create a new uNUmberMod to not overwrite operand 1
+
+	private Integer sizeD = 20;
+	boolean operandError = false;
+	boolean printing = false;
+	private double new_window_hieght = WINDOW_HEIGHT;
+	private int count = 0;
+	// These are the application values required by the user interface
+	Label[] label = new Label[4];
+	Label[] labPM = new Label[3];
+	String texts[] = { "Inexact I/O Calculator", "First operand", "Second operand", "Result" };
+	String plusMinus[] = { "±", "±", "±" };
+	TextField text_Operand1 = new TextField();
+	TextField text_Operand2 = new TextField();
+	TextField Err_Operand1 = new TextField();
+	TextField Err_Operand2 = new TextField();
+	TextField text_Result = new TextField();
+	TextField Err_Result = new TextField();
+	TextField decimals = new TextField();
+	Label printLabel = new Label("");// new Label("Enter the file name here:");
+	Label InputLabel = new Label("");// new Label("Enter the file name here:");
+	Label printLabelErr = new Label("");// new Label("Replace existing file?");
+	Label printLabelNew = new Label("");// new Label("New file");
+	Label InputLabelErr = new Label("");// new Label("Replace existing file?");
+
+	TextField PrintField = new TextField();
+	TextField InputField = new TextField();
+	Label dec = new Label("Size (>7) ");
+	Label label_errOperand1 = new Label("");
+	Label label_errOperand2 = new Label("");
+	Button[] button = new Button[5];
+	String But_texts[] = { "+", "-", "x", "÷", "\u221A" };
+	Button printButton = new Button();
+	String Print_text[] = { "Enable I/O", "Disable I/O" };
+	Button printFileButton = new Button();
+	Button InputFileButton = new Button();
+	String Print_File_text[] = { "Set file for output", "Replace file for printing", "Close the file!" };
+	String Input_File_text[] = { "Read from this file", "Replace file for printing", "Close the file!" };
+	static File file;
+	static File Infile;
+	static PrintWriter printWriter;
+
+	/**********
+	 * This method initializes all of the elements of the graphical user interface.
+	 * These assignments determine the location, size, font, color, and change and
+	 * event handlers for each GUI object.
+	 */
+	private void initializeTheGUIElements(Pane theRoot, Stage theStage) {
+		// Label theScene with the name of the calculator, centered at the top of the
+		// pane
+		int ypos[] = { 10, 40, 130, 220 };
+		int size[] = { 24, 18, 18, 18 };
+		for (int i = 0; i < texts.length; i++) {
+			label[i] = new Label(texts[i]);
+			Label l = label[i];
+			l.setFont(Font.font("Arial", size[i]));
+			l.setMinWidth(WINDOW_WIDTH - 10);
+			l.setLayoutX(0);
+			l.setLayoutY(ypos[i]);
+		}
+
+		int ypm[] = { 70, 160, 250 };
+
+		for (int i = 0; i < plusMinus.length; i++) {
+			labPM[i] = new Label(plusMinus[i]);
+			Label l = labPM[i];
+			l.setFont(Font.font("Arial", 24));
+			l.setMinWidth(WINDOW_WIDTH - 150);
+			l.setAlignment(Pos.BASELINE_RIGHT);
+
+			l.setLayoutX(0);
+			l.setLayoutY(ypm[i]);
+		}
+
+		// Establish the first text input operand field and when anything changes in
+		// operand 1,
+		// process both fields to ensure that we are ready to perform as soon as
+		// possible.
+		TextField t = text_Operand1;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(WINDOW_WIDTH - 200);
+		t.setMaxWidth(WINDOW_WIDTH - 200);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setLayoutX(10);
+		t.setLayoutY(70);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			One = new Convert(text_Operand1.getText());
+			operand1 = One.TheValue;
+
+		});
+		t.setOnAction((event) -> {
+			Err_Operand1.requestFocus();
+		});
+
+		t = Err_Operand1;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(120);
+		t.setMaxWidth(120);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setLayoutX(WINDOW_WIDTH - 130);
+		t.setLayoutY(70);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			OneErr = new Convert(Err_Operand1.getText());
+			Erroperand1 = OneErr.TheValue;
+
+		});
+		t.setOnAction((event) -> {
+			text_Operand2.requestFocus();
+		});
+
+		// Establish the second text input operand field and when anything changes in
+		// operand 2,
+		// process both fields to ensure that we are ready to perform as soon as
+		// possible.
+		t = text_Operand2;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(WINDOW_WIDTH - 200);
+		t.setMaxWidth(WINDOW_WIDTH - 200);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setLayoutX(10);
+		t.setLayoutY(160);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			Two = new Convert(text_Operand2.getText());
+			operand2 = Two.TheValue;
+		});
+		t.setOnAction((event) -> {
+			Err_Operand2.requestFocus();
+		});
+
+		t = Err_Operand2;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(120);
+		t.setMaxWidth(120);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setLayoutX(WINDOW_WIDTH - 130);
+		t.setLayoutY(160);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			TwoErr = new Convert(Err_Operand2.getText());
+			Erroperand2 = TwoErr.TheValue;
+
+		});
+		t.setOnAction((event) -> {
+			text_Result.requestFocus();
+		});
+
+		// Establish an error message for the first operand just above it with, right
+		// aligned
+		Label l = label_errOperand1;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.RED);
+		l.setMinWidth(WINDOW_WIDTH - 10);
+		l.setAlignment(Pos.BASELINE_LEFT);
+		l.setLayoutX(400);
+		l.setLayoutY(45);
+
+		// Establish an error message for the second operand just above it with, right
+		// aligned
+		l = label_errOperand2;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.RED);
+		l.setMinWidth(WINDOW_WIDTH - 10);
+		l.setAlignment(Pos.BASELINE_LEFT);
+		l.setLayoutX(400);
+		l.setLayoutY(135);
+
+		// Establish the result output field. It is not editable, so the text can be
+		// selected
+		// and copied, but it cannot be altered by the user.
+		t = text_Result;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(WINDOW_WIDTH - 200);
+		t.setMaxWidth(WINDOW_WIDTH - 200);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setEditable(false);
+		t.setLayoutX(10);
+		t.setLayoutY(250);
+
+		t = Err_Result;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(120);
+		t.setMaxWidth(120);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setEditable(false);
+		t.setLayoutX(WINDOW_WIDTH - 130);
+		t.setLayoutY(250);
+
+		printButton = new Button(Print_text[0]);
+		Button b = printButton;
+		b.setFont(Font.font("Symbol", 10));
+		b.setMinWidth(100);
+		b.setMaxWidth(100);
+		b.setMaxHeight(30);
+		b.setMinHeight(30);
+		b.setAlignment(Pos.BASELINE_CENTER);
+		b.setLayoutX(250);
+		b.setLayoutY(370);
+		b.setOnAction((event) -> {
+			if (printing) {
+				printButton.setText(Print_text[0]);
+				printing = false;// enables printing and sets button to disable enlarge window
+				theRoot.getChildren().remove(PrintField);
+				theRoot.getChildren().remove(printFileButton);
+				printLabel.setText("");
+				theStage.setHeight(new_window_hieght + 40); // change the hieght
+			} else {
+				printing = true;
+				printButton.setText(Print_text[1]);
+				theRoot.getChildren().add(PrintField);
+				theRoot.getChildren().add(InputField);
+				theRoot.getChildren().add(InputFileButton);
+
+				theRoot.getChildren().add(printFileButton);
+				printLabel.setText("Enter the output file name here:");
+				InputLabel.setText("Enter the input file name here:");
+				InputLabel.setDisable(true);
+				theStage.setHeight(new_window_hieght + 200); // change the hieght
+
+			}
+		});
+		t = PrintField;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(320);
+		t.setMaxWidth(320);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setEditable(true);
+		t.setLayoutX(10);
+		t.setLayoutY(440);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			file = new File(PrintField.getText());
+			// PrintWriter file = new PrintWriter();
+			if (file.exists() && !file.isDirectory()) {
+				printFileButton.setText(Print_File_text[1]);
+				printLabelNew.setText("");
+				printLabelErr.setText("Replace existing file?");
+
+			} else {
+				printLabelNew.setText("New file");
+				printFileButton.setText(Print_File_text[0]);
+				printFileButton.setDisable(false);
+				printLabelErr.setText("");
+
+			}
+			//
+			//
+			// } catch (FileNotFoundException e) {
+			// printLabelErr.setText("Replace existing file?");
+			// //printLabelNew.setText("New file");
+			// //e.printStackTrace();
+			// }
+
+		});
+
+		t = InputField;
+		t.setFont(Font.font("Arial", 18));
+		t.setMinWidth(320);
+		t.setMaxWidth(320);
+		t.setAlignment(Pos.BASELINE_LEFT);
+		t.setEditable(true);
+		t.setLayoutX(10);
+		t.setLayoutY(520);
+		t.setDisable(true);
+		t.textProperty().addListener((observable, oldValue, newValue) -> {
+			Infile = new File(InputField.getText());
+
+			// // PrintWriter file = new PrintWriter();
+			if (Infile.exists() && !file.isDirectory()) {
+				InputLabelErr.setTextFill(Color.GREEN);
+				InputLabelErr.setText("Valid file");
+				InputFileButton.setDisable(false);
+				// printFileButton.setText(Print_File_text[1]);
+				// printLabelNew.setText("");
+				// printLabelErr.setText("Replace existing file?");
+				//
+			} else {
+				InputLabelErr.setTextFill(Color.RED);
+				InputLabelErr.setText("File does not exist!");
+				// printFileButton.setText(Print_File_text[0]);
+				// printFileButton.setDisable(false);
+				// printLabelErr.setText("");
+				// }
+				// //
+				// //
+				// // } catch (FileNotFoundException e) {
+				// // printLabelErr.setText("Replace existing file?");
+				// // //printLabelNew.setText("New file");
+				// // //e.printStackTrace();
+			}
+			//
+		});
+
+		l = printLabel;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.BLACK);
+		l.setMinWidth(WINDOW_WIDTH - 200);
+		l.setAlignment(Pos.BASELINE_LEFT);
+		l.setLayoutX(10);
+		l.setLayoutY(410);
+
+		l = InputLabel;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.BLACK);
+		l.setMinWidth(WINDOW_WIDTH - 200);
+		l.setAlignment(Pos.BASELINE_LEFT);
+		l.setLayoutX(10);
+		l.setLayoutY(490);
+
+		l = printLabelErr;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.RED);
+		l.setMinWidth(200);
+		l.setAlignment(Pos.BASELINE_CENTER);
+		l.setLayoutX(350);
+		l.setLayoutY(410);
+
+		l = InputLabelErr;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.RED);
+		l.setMinWidth(200);
+		l.setAlignment(Pos.BASELINE_CENTER);
+		l.setLayoutX(350);
+		l.setLayoutY(490);
+
+		l = printLabelNew;
+		l.setFont(Font.font("Arial", 18));
+		l.setTextFill(Color.GREEN);
+		l.setMinWidth(200);
+		l.setAlignment(Pos.BASELINE_CENTER);
+		l.setLayoutX(350);
+		l.setLayoutY(410);
+
+		printFileButton = new Button(Print_File_text[0]);
+		b = printFileButton;
+		b.setFont(Font.font("Symbol", 12));
+		b.setMinWidth(200);
+		b.setMaxWidth(200);
+		b.setMaxHeight(30);
+		b.setMinHeight(30);
+		b.setAlignment(Pos.BASELINE_CENTER);
+		b.setLayoutX(350);
+		b.setLayoutY(440);
+		b.setDisable(true);
+		b.setOnAction((event) -> {
+			count++;
+
+			// PrintWriter printWriter = null;
+			printFileButton.setText(Print_File_text[2]);
+			printLabelNew.setText("");
+			printLabelErr.setText("Printing to file");
+			printLabelErr.setTextFill(Color.GREEN);
+			PrintField.setDisable(true);
+			InputLabel.setDisable(false);
+			printFileButton.setDisable(false);
+			InputField.setDisable(false);
+
+			try {
+				printWriter = new PrintWriter(
+						new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true))), true);
+
+				// printWriter = new PrintWriter(file);
+
+				if (printFileButton.getText().equals(Print_File_text[2]) && count % 2 == 0) {
+					printFileButton.setText(Print_File_text[0]);
+					printFileButton.setDisable(true);
+					PrintField.setDisable(false);
+					printLabelErr.setText("");
+					printWriter.close();
+
+				}
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} finally {
+
+			}
+			// printWriter.println("printing right");
+
+		});
+
+		InputFileButton = new Button(Input_File_text[0]);
+		b = InputFileButton;
+		b.setFont(Font.font("Symbol", 12));
+		b.setMinWidth(200);
+		b.setMaxWidth(200);
+		b.setMaxHeight(30);
+		b.setMinHeight(30);
+		b.setAlignment(Pos.BASELINE_CENTER);
+		b.setLayoutX(350);
+		b.setLayoutY(520);
+		b.setDisable(true);
+		b.setOnAction((event) -> {
+
+			Scanner ifsInput;
+
+			ArrayList<String> input = new ArrayList<>();
+			// attempts to create scanner for file
+			try {
+				ifsInput = new Scanner(Infile);
+			} catch (FileNotFoundException e) {
+				System.out.println("File Doesnt Exist");
+				return;
+			}
+			while (ifsInput.hasNext()) {
+				input.add(ifsInput.next());
+			}
+			ifsInput.close();
+			InputLabelErr.setTextFill(Color.BLACK);
+			InputLabelErr.setText("Done reading file");
+			for (String term : input) {
+				System.out.println(term);
+			};
+			for (int i = 0; i < input.size(); i++) {
+				System.out.println(input.get(i) + " " + i);
+				if (input.get(i).equals("Operand1")) {
+					int temp = i;
+					One = new Convert(input.get(temp + 2));
+					operand1 = One.TheValue;
+					OneErr = new Convert(input.get(temp + 4));
+					Erroperand1 = OneErr.TheValue;
+					if (input.get(temp + 6).equals("Operand2")) {
+						Two = new Convert(input.get(temp + 8));
+						operand2 = Two.TheValue;
+						TwoErr = new Convert(input.get(temp + 10));
+						Erroperand2 = TwoErr.TheValue;
+						if (input.get(temp + 11).equals("Add")) {
+							addOperands(printWriter);
+							printWriter.flush();
+						} else if (input.get(temp + 11).equals("Subtract")) {
+							subOperands(printWriter);
+							printWriter.flush();
+						} else if (input.get(temp + 11).equals("Multiply")) {
+							mpyOperands(printWriter);
+							printWriter.flush();
+						} else if (input.get(temp + 11).equals("Divide")) {
+							divOperands(printWriter);
+							printWriter.flush();
+						}
+						InResult = new Convert(input.get(temp + 13));
+						inResult = InResult.TheValue;
+						InResultErr = new Convert(input.get(temp + 15));
+						inResultErr = InResultErr.TheValue;
+						InexactUNumber Testresult = new InexactUNumber(inResult, inResultErr);
+						if (Testresult.getBestEstimate().compareTo(Outresult.getBestEstimate()) == 1) {
+							printWriter.println("//Results Match");
+							printWriter.println();
+						} else {
+							printWriter.println("//**ERROR Results do not match!");
+							printWriter.println("// Input: " + Testresult);
+							printWriter.println("// Computed: " + Outresult);
+							printWriter.println();
+						}
+					} else if (input.get(temp + 5).equals("Square")) {
+						InResult = new Convert(input.get(temp + 9));
+						inResult = InResult.TheValue;
+						InResultErr = new Convert(input.get(temp + 11));
+						inResultErr = InResultErr.TheValue;
+						sqrtOperands(printWriter);
+						printWriter.flush();
+						InexactUNumber Testresult = new InexactUNumber(inResult, inResultErr);
+
+						if (Testresult.getBestEstimate().compareTo(Outresult.getBestEstimate()) == 1) {
+							printWriter.println("//Results Match");
+							printWriter.println();
+						} else {
+							printWriter.println("//**ERROR Results do not match!");
+							printWriter.println("// Input: " + Testresult);
+							printWriter.println("// Computed: " + Outresult);
+							printWriter.println();
+						}
+					}
+
+				}
+			}
+		});
+
+		// this combines the four buttons into one loop
+		for (int i = 0; i < But_texts.length; i++) {
+			button[i] = new Button(But_texts[i]);
+			b = button[i];
+			b.setFont(Font.font("Symbol", 32));
+			b.setMinWidth(BUTTON_WIDTH);
+			b.setAlignment(Pos.BASELINE_LEFT);
+			b.setLayoutX((i + 1) * BUTTON_SPACE - BUTTON_OFFSET);
+			b.setLayoutY(300);
+			switch (i) {
+			case 0:
+				b.setOnAction((event) -> {
+					addOperands(printWriter);
+					printWriter.flush();
+
+				});
+				break;
+			case 1:
+				b.setOnAction((event) -> {
+					subOperands(printWriter);
+					printWriter.flush();
+				});
+				break;
+			case 2:
+				b.setOnAction((event) -> {
+					mpyOperands(printWriter);
+				});
+				break;
+			case 3:
+				b.setOnAction((event) -> {
+					divOperands(printWriter);
+				});
+				break;
+			case 4:
+				b.setOnAction((event) -> {
+					sqrtOperands(printWriter);
+				});
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	/**********
+	 * This is the start method that is call once the application has been loaded
+	 * into memory and is ready to get to work.
+	 * 
+	 * In designing this application I have elected to IGNORE all opportunities for
+	 * automatic layout support and instead have elected to manually position each
+	 * GUI element and its properties.
+	 * 
+	 */
+	public void start(Stage theStage) throws Exception {
+
+		theStage.setTitle("Amanda Martin"); // Label the stage (a window)
+		Pane theRoot = new Pane(); // Create a pane within the window
+
+		initializeTheGUIElements(theRoot, theStage); // Define all the GUI elements
+
+		theRoot.getChildren().addAll(label[0], label[1], label[2], label[3], text_Operand1, label_errOperand2,
+				label_errOperand1, text_Operand2, text_Result, button[0], button[1], button[2], button[3], button[4],
+				labPM[0], labPM[1], labPM[2], Err_Result, Err_Operand1, Err_Operand2, printButton, printLabelErr,
+				printLabelNew, printLabel, InputLabel, InputLabelErr);
+
+		Scene theScene = new Scene(theRoot, WINDOW_WIDTH, new_window_hieght + 10); // Create the scene with
+		// the required width and height
+
+		theStage.setScene(theScene); // Set the scene on the stage
+		theStage.setResizable(true);
+		theStage.show(); // Show the stage to the user
+
+	}
+
+	private boolean binaryOperandIssues() {
+		if (!One.operandDefined) { // Check operand 1 and set a
+			label_errOperand1.setText("Missing a valid value"); // missing value error
+			label_errOperand2.setText("");
+		}
+		if (!Two.operandDefined) { // Check operand 2 and set a
+			label_errOperand2.setText("Missing a valid value"); // missing value error
+			label_errOperand1.setText("");
+		}
+		if (operandError) // See if invalid input errors
+			return true; // return true if so
+		if (!One.operandDefined || !Two.operandDefined) // See if any missing input values
+			return true; // return true is so
+		label_errOperand1.setText("");
+		label_errOperand2.setText("");
+		return false; // Else okay input, return false
+	}
+
+	/*******************************************************************************************************
+	 * This portion of the class defines the computation that takes place when the
+	 * various calculator buttons (add, subtract, multiply, and divide) are pressed.
+	 */
+
+	/**********
+	 * This is the add routine
+	 * 
+	 */
+	private void addOperands(PrintWriter printWriter) {
+		InexactUNumber Number1 = new InexactUNumber(operand1, Erroperand1);
+		InexactUNumber Number2 = new InexactUNumber(operand2, Erroperand2);
+		if (printWriter == null)
+			try {
+				printWriter = new PrintWriter(
+						new BufferedWriter(new OutputStreamWriter(new FileOutputStream("nofile", true))), true);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+			}
+		;
+		printWriter.println("Set Operand1 = " + Number1);
+		printWriter.flush();
+
+		printWriter.println("Set Operand2 = " + Number2);
+		printWriter.flush();
+
+		printWriter.println("Add ");
+		printWriter.flush();
+
+		if (binaryOperandIssues()) // If there is an operand error
+			return; // just return. Otherwise, reset
+		label_errOperand2.setText(""); // the "divide by zero error"
+		InexactUNumber result = new InexactUNumber(Number1);// create a new uNUmberMod to not overwrite operand 1
+		result.add(Number2); // perform the addition
+		text_Result.setText(Number1.toStringBestEstimate()); // Converts the result to string
+		label[3].setText("Sum"); // Specify the result is a sum
+		Number1.roundTo(Math.abs(Erroperand1.getDP()));
+		Err_Result.setText(Number1.toStringErrorTerm());
+		printWriter.println("Result= " + Number1);
+		Outresult = Number1;
+		printWriter.println();
+
+	}
+
+	/**********
+	 * This is the subtract routine
+	 * 
+	 */
+	private void subOperands(PrintWriter printWriter) {
+		InexactUNumber Number2 = new InexactUNumber(operand2, Erroperand2);
+		InexactUNumber Number1 = new InexactUNumber(operand1, Erroperand1);
+		if (printWriter == null)
+			try {
+				printWriter = new PrintWriter(
+						new BufferedWriter(new OutputStreamWriter(new FileOutputStream("nofile", true))), true);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+			}
+		;
+		printWriter.println("Set Operand1 = " + Number1);
+		printWriter.println("Set Operand2 = " + Number2);
+		printWriter.println("Subtract ");
+
+		if (binaryOperandIssues()) // If there is an operand error
+			return; // just return. Otherwise, reset
+		InexactUNumber result = new InexactUNumber(Number1);// create a new uNUmberMod to not overwrite operand 1
+		result.sub(Number2); // perform the subtraction
+		text_Result.setText(Number1.toStringBestEstimate()); // Converts the result to string
+		label[3].setText("Difference"); // Specify the result is a difference
+		Number1.roundTo(Math.abs(Erroperand1.getDP()));
+		Err_Result.setText(Number1.toStringErrorTerm());
+		printWriter.println("Result= " + Number1);
+		Outresult = Number1;
+		printWriter.println();
+	}
+
+	/**********
+	 * This is the multiply routine
+	 * 
+	 */
+	private void mpyOperands(PrintWriter printWriter) {
+		InexactUNumber Number2 = new InexactUNumber(operand2, Erroperand2);
+		InexactUNumber Number1 = new InexactUNumber(operand1, Erroperand1);
+		if (printWriter == null)
+			try {
+				printWriter = new PrintWriter(
+						new BufferedWriter(new OutputStreamWriter(new FileOutputStream("nofile", true))), true);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+			}
+		;
+		printWriter.println("Set Operand1 = " + Number1);
+		printWriter.println("Set Operand2 = " + Number2);
+		printWriter.println("Multiply ");
+
+		if (binaryOperandIssues()) // If there is an operand error
+			return; // just return. Otherwise, reset
+		InexactUNumber result = new InexactUNumber(Number1);// create a new uNUmberMod to not overwrite operand 1
+		result.mpy(Number2); // perform the product
+		text_Result.setText(Number1.toStringBestEstimate()); // Converts the result to string
+		label[3].setText("Product"); // Specify the result is a product
+		Number1.roundTo(Math.abs(Erroperand1.getDP()));
+		Err_Result.setText(Number1.toStringErrorTerm());
+		printWriter.println("Result= " + Number1);
+		Outresult = Number1;
+		printWriter.println();
+	}
+
+	/**********
+	 * This is the divide routine. If the divisor is zero, the divisor is declared
+	 * to be invalid.
+	 * 
+	 */
+	private void divOperands(PrintWriter printWriter) {
+		InexactUNumber Number2 = new InexactUNumber(operand2, Erroperand2);
+		InexactUNumber Number1 = new InexactUNumber(operand1, Erroperand1);
+		if (printWriter == null)
+			try {
+				printWriter = new PrintWriter(
+						new BufferedWriter(new OutputStreamWriter(new FileOutputStream("nofile", true))), true);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+			}
+		;
+		printWriter.println("Set Operand1 = " + Number1);
+		printWriter.println("Set Operand2 = " + Number2);
+		printWriter.println("Divide ");
+
+		if (binaryOperandIssues()) // If there is an operand error
+			return; // just return. Otherwise, reset
+		InexactUNumber result = new InexactUNumber(Number1);// create a new uNUmberMod to not overwrite operand 1
+		result.div(Number2); // perform the division
+		text_Result.setText(result.toStringBestEstimate()); // Converts the result to string
+		label[3].setText("Quotient"); // Specify the result is a sum
+		result.roundTo(Math.abs(Erroperand1.getDP()));
+		Err_Result.setText(result.toStringErrorTerm());
+		printWriter.println("Result= " + result);
+		printWriter.println();
+		Outresult = result;
+	}
+
+	private void sqrtOperands(PrintWriter printWriter) {
+		if (operand1.isNegative()) { // Check to see if the value is
+			label_errOperand1.setText("Square root of a negative value"); // negative. if so,
+			text_Result.setText(""); // display the error message
+		} else {
+			label_errOperand2.setText(""); // Reset the "divide by zero error"
+			// uNumberMod result = new uNumberMod(operand1,sizeD);
+
+			EnhancedUNumber resultsqrt = new EnhancedUNumber(operand1);
+
+			EnhancedUNumber ErrResult = new EnhancedUNumber(Erroperand1);
+			if (printWriter == null)
+				try {
+					printWriter = new PrintWriter(
+							new BufferedWriter(new OutputStreamWriter(new FileOutputStream("nofile", true))), true);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} finally {
+				}
+			;
+			InexactUNumber Number1 = new InexactUNumber(operand1, Erroperand1);
+
+			printWriter.println("Set Operand1 = " + Number1);
+			printWriter.println("Square Root ");
+
+			ErrResult = new EnhancedUNumber(ErrResult); // System.out.println(result);
+
+			resultsqrt = new EnhancedUNumber(resultsqrt); // System.out.println(result);
+			ErrResult.div(resultsqrt);
+			resultsqrt.squareRoot(); // Do the square root
+			ErrResult.mpy(resultsqrt);
+
+			String theAnswer = resultsqrt.toString(sizeD);// set theAnswer to the result with 8 characters
+			text_Result.setText(theAnswer); // Converts the result to string
+			label[3].setText("Square Root"); // Specify the result is a quotient
+			text_Operand2.setText("");
+
+			Erroperand1.div(new EnhancedUNumber("2", 1, true, Erroperand1.getDP()));
+			Erroperand1.mpy(resultsqrt);
+			String theAnswerErr = Erroperand1.toString(sizeD);// set theAnswer to the result with 8 characters
+
+			Err_Result.setText(theAnswerErr);
+			printWriter.println("Result = " + resultsqrt + " ± " + theAnswerErr);
+			Outresult = new InexactUNumber(resultsqrt, Erroperand1);
+		}
+	}
+
+	public static void main(String[] args) {
+		launch(args); // for all JavaFX applications.
+	}
+}
