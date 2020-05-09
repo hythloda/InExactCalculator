@@ -1,0 +1,1117 @@
+package uNumberLibrary;
+
+	/**
+	 * Description: Additional functionality to support square root and the
+	 * professional's calculator
+	 * </p>
+	 * @author Amanda Martin
+	 * 
+	 * @version 2.00 Wrting state 6 baseline
+	 * 
+	 */
+
+	public class EnhancedUNumber extends UNumber {
+
+		/******************************************************************************************
+		 * The following constructors invoke the corresponding superclass constructors.
+		 * 
+		 */
+		public EnhancedUNumber() {
+			super();
+		}
+
+		public EnhancedUNumber(EnhancedUNumber value) {
+			super(value);
+		}
+
+		public EnhancedUNumber(EnhancedUNumber value, int size) {
+			super(value, size);
+		}
+
+		public EnhancedUNumber(int value) {
+			super(value);
+		}
+
+		public EnhancedUNumber(long value) {
+			super(value);
+		}
+
+		public EnhancedUNumber(double value) {
+			super(value);
+		}
+
+		public EnhancedUNumber(String digits, int charateristic, boolean sign) {
+			super(digits, charateristic, sign);
+		}
+
+		public EnhancedUNumber(String digits, int charateristic, boolean sign, int size) {
+			super(digits, charateristic, sign, size);
+		}
+
+		/**********
+		 * Getters to provide access to the internals of ExtendedUNumbers
+		 */
+		public boolean getS() {
+			return this.s;
+		};
+
+		public byte[] getD() {
+			return this.d;
+		};
+
+		public int getDP() {
+			return this.dP;
+		};
+
+		/**********
+		 * Given two EnhancedUNumbers, this method computes the number of matching
+		 * significant digits working from the most significant downward.
+		 * 
+		 * @param left
+		 *            The left operand
+		 * @param right
+		 *            The right operand
+		 * @return Returns the number of matching significant digits
+		 */
+		public int significantDigits(EnhancedUNumber left, EnhancedUNumber right) {
+			if (left.s != right.s || left.dP != right.dP)
+				return 0;
+			int size = left.length();
+			if (size > right.length())
+				size = right.length();
+			for (int ndx = 0; ndx < size; ndx++)
+				if (left.d[ndx] != right.d[ndx])
+					return ndx - 1;
+			return size;
+		}
+
+		/**********
+		 * Compute the square root of this object, replacing this object with the
+		 * approximate value of the square root computed using Newton's Method.
+		 */
+		
+		public void squareRoot() {
+
+			/* Check for special case of zero */
+			if (this.d[0] == 0)
+				return;
+			/* The number of significant digits to be returned */
+			int resultSize = this.d.length;
+			/* Compute the square root with five extra significant digits. */
+			EnhancedUNumber value = new EnhancedUNumber(this, resultSize + 5);
+			/* The value two is used to average the old and the new guess */
+			EnhancedUNumber two = new EnhancedUNumber("2", 1, true, 2); // This is the value 2.0
+			/*
+			 * If the value is negative, return a value of zero. We do not compute imaginary
+			 * values
+			 */
+			if (!this.s) {
+				this.s = true;
+				this.dP = 0;
+				this.d = new byte[20];
+				for (int i = 0; i < 20; i++)
+					d[i] = 0;
+				return;
+			}
+			int exp = this.dP+1;//+1 to account for the normalized uNumber vs how we think of numbers
+			String Start ="";
+				exp/=2; //how many times we have 100 discard the extra if its odd
+				Start+=d[0];
+				//System.out.println("here"+d[0]);
+				
+				//if(d.length>=1)
+				Start+=d[1];//we really only need the first two digits
+				//else
+					//Start+='0';
+				
+		//	System.out.println((Initald[Integer.parseInt(Start)])+ " "+ exp+ " "+100);
+				EnhancedUNumber InitalGuess= new EnhancedUNumber(toString(Initald[Integer.parseInt(Start)]), exp, true, 20 );
+			EnhancedUNumber newGuess = new EnhancedUNumber(InitalGuess);//new EnhancedUNumber(InitalValues[Integer.parseInt(Start)]);
+			EnhancedUNumber tempValue = new EnhancedUNumber(this);// tempValue stores value but is
+			EnhancedUNumber square = new EnhancedUNumber(tempValue);
+
+			EnhancedUNumber limit = new EnhancedUNumber("50000", this.getDP() - 100, true);
+			EnhancedUNumber temp = new EnhancedUNumber(this); 
+
+			// Use a temp value so as not to damage the input parameters
+			int iteration = 0;
+			do { // This is the implementation of Newton's method for finding square root
+
+				iteration++; // Keep track of the number of iterations
+				UNumber oldGuess = new EnhancedUNumber(newGuess,100); // The oldGuess was the previous newGuess
+				tempValue = new EnhancedUNumber(this);// tempValue stores value but is
+				tempValue.div(oldGuess);// = tempValue/oldGuess
+				tempValue.add(oldGuess);// = tempValue/oldGuess + oldGuess
+				tempValue.div(two);// = (tempValue/oldGuess + oldGuess)/2
+				newGuess = tempValue;// set the new guess to the tempValue
+				square = new EnhancedUNumber(newGuess); 
+				square.mpy(square);
+				temp = new EnhancedUNumber(square);
+				temp.sub(this); // Subtract the original from the computed
+				temp.abs(); // Use ABS to force to be positive
+				temp.sub(limit); // Subtract the limit. If the result is
+									// positive, the difference is too large
+			//	System.out.println(iteration+" "+temp) ;
+			} while (temp.getS() &&iteration<1000);
+			newGuess =new EnhancedUNumber(newGuess,resultSize-7);
+			normalize(newGuess);
+			this.d = newGuess.d; 
+			this.dP = newGuess.dP;
+			this.s = newGuess.s;
+			return;
+		}
+
+		/**********
+		 * This portion of the UNumber parser processes states 6, 7, and 8 of the
+		 * UNumber recognizer that processes a continuation after finding and "E" or an
+		 * "e".
+		 * 
+		 * @param s
+		 *            The string containing the UNumber
+		 * 
+		 * @param ndx
+		 *            The index into the UNumber string
+		 * 
+		 * @param d
+		 *            The string containing just the numeric digits
+		 * 
+		 * @param dp
+		 *            The location of the decimal point
+		 * 
+		 * @param sign
+		 *            The sign of the whole UNumber
+		 * 
+		 * @return The UNumber after it has been parsed
+		 */
+		private static EnhancedUNumber nextEnhancedUNumberState6(String s, int ndx, String d, int dp, boolean sign) {
+			// s already has a sentinel character, a ';'
+			// already checked for e and that placed EnhancedUNumber in this method and moved to
+			// ndx+1
+
+			String exp = "";
+			boolean dir = true;// sets the direction of the decimal point movement
+			// State 7
+			if (s.charAt(ndx) == '+' || s.charAt(ndx) == '-') { // If exponent starts with a sign or a digit
+				ndx++; // we need to go to the negative direction with decimal point
+				dir = false;
+
+			}
+			if (s.charAt(ndx) == '+') { // If exponent starts with a sign or a digit
+				ndx++; // we need to go to the positive or negative
+				dir = true;
+			}
+
+			// State 8 from state 6 and 7 only
+			while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') // digit sequence for state 8
+				exp += s.charAt(ndx++);
+			if (dir)
+				dp += Integer.parseInt(exp);
+			else
+				dp -= Integer.parseInt(exp);
+			// When the end of the digit sequence is found, it should be the end of the
+			// string sentinel
+			if (ndx + 1 == s.length()) // See if at the sentinel position. If so
+				return new EnhancedUNumber(d, dp, sign); // create the UNumber
+
+			else // Else is was something else and so this
+				return null; // is not a valid UNumber
+		}
+
+		/**********
+		 * This is a UNumber parser built on the 8 state, FSM. Given a sign and a
+		 * string, it produces a UNumber using the same finite state machine as the
+		 * recognizer.
+		 * 
+		 * @param src
+		 *            The input string containing what should be a UNumber
+		 * 
+		 * @param positive
+		 *            A boolean specifying the sign of the UNumber
+		 * 
+		 * @return The UNumber or a zero UNumber, depending on whether or not the input
+		 *         is a valid UNumber or not
+		 */
+		public static EnhancedUNumber nextEnhancedUNumber(String src, boolean positive) {
+			EnhancedUNumber temp = nextEnhancedUNumberRoot(src, positive); // Produce a UNumber
+			if (temp != null) // If a UNumber was returned,
+				UNumber.normalize(temp); // normalize it.
+			return temp; // Return the null or the normalized result
+		}
+
+		/**********
+		 * This private method produces an UNNORMALIZED UNumber based on the user input.
+		 * Since real UNumbers are always normalized, we wrap this private method with
+		 * code to normalize the value once it has been produced.
+		 * 
+		 * @param src
+		 *            The input string containing what should be a UNumber
+		 * @param positive
+		 *            A boolean specifying the sign of the UNumber
+		 * @return The UNumber or null, depending on whether or not the input is a valid
+		 *         UNumber or not. It may be unnormalized, if the user provides input
+		 *         with leading significant digits that are zero.
+		 */
+		private static EnhancedUNumber nextEnhancedUNumberRoot(String src, boolean positive) {
+			String d = ""; // Initialize the string used to produce
+							// the UNumber; a digit string
+
+			int dp = src.length(); // Assume there is no decimal point
+			String s = src + ';'; // Append a sentinel character, a ';'
+			int ndx = 0; // Initialize the character index
+
+			// State 0 // We start in State zero
+			if (s.charAt(0) >= '0' && s.charAt(0) <= '9') { // If the first character in State 0 is a
+															// digit we transition to state 1
+				// State 1
+				d += s.charAt(0); // Add the first character to the list
+				ndx = 1; // Increment the index
+							// If there are more digits, process each
+				while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // in turn and add them to the
+					d += s.charAt(ndx++); // digit sequence
+				}
+				if (s.charAt(ndx) == '.') { // If the end of the digit sequence is a
+											// '.', transition to state 2 and keep
+					dp = ndx; // track of the index of the decimal point
+
+					// State 2
+					ndx++; // Accept the decimal point
+							// If the next character is a digit,
+					if (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // transition to state 3
+
+						// State 3 // Here we gather the fractional part
+						d += s.charAt(ndx++); // Continue to add these digits to the
+						while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // digit sequence
+							d += s.charAt(ndx++);
+						} // When the end of the digit sequence is
+							// found, it should be the exponent or
+							// the end of the string sentinel
+
+						if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // See if the exponent
+							// It was the exponent, so process it and
+							return nextEnhancedUNumberState6(s, ndx + 1, d, dp, positive);// return the result
+
+						} else if (ndx + 1 == s.length()) // See if at the sentinel position. If so
+							return new EnhancedUNumber(d, dp, positive); // create the UNumber
+
+						else // Else is was something else and so this
+							return null; // is not a valid UNumber
+
+						// Still in State 2 and the next character is not a digit, so see if it might be
+					} else if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // an "E" or "e" and
+						// be an exponent... if so, process it and
+						return nextEnhancedUNumberState6(s, ndx + 1, d, dp, positive); // the UNumber
+
+						// Still in State 2 and the next character is not a digit or the start of the
+						// exponent, so check to see if we are
+					} else if (ndx + 1 == s.length()) // are at the location of the sentinel
+						return new EnhancedUNumber(d, dp, positive); // If so, return the UNumber
+
+					// Still in State 2 and it is none of the valid continuations, so there is an
+					// error
+					else
+						return null; // so we return a null
+
+					// We have finished with State 1 and the next character was not a decimal point,
+					// so
+					// we do not transition to state 2. Therefore, we check to see if the next
+					// character
+					// is an "E" or "e" so we can transition to state 6
+				} else if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // FROM State 1 to 6
+					// See if it is an exponent
+					// The next character is an exponent indication so we transition to state 6
+					dp = ndx; // Set up the decimal point and then we go to the common State 6 code
+					return nextEnhancedUNumberState6(s, ndx + 1, d, dp, positive); // and return that result
+
+					// We have finished State 1, the next character is not a decimal point or the
+					// start of
+					// the exponent, so let's see if it is at the sentinel character
+				} else if (ndx + 1 == s.length()) { // If next character is the sentinel, we
+					// System.out.println("s " + s + " d " + d + " dp " + dp);
+					return new EnhancedUNumber(d, dp, positive); // are done and return the UNumber
+				}
+				// We have finished State 1, there is more data and the next character is not a
+				// valid
+				else
+					return null; // continuation, so it is an error, and we
+									// return a null
+			} else
+			// We are still in State 0, but we know the next character is not a digit
+			if (s.charAt(0) == '.') { // If the character is a period, transition
+				// we transition to state 4 and record the
+				dp = 0; // location of the decimal point
+
+				// State 4
+				if (s.charAt(1) >= '0' && s.charAt(1) <= '9') { // If the next character is a digit,
+					// accept it and transition to state 5
+					// state 5
+					ndx = 1; // Set up the input character index
+					d += s.charAt(ndx++); // Append the first digit of the UNumber
+
+					// Loop and continue to append digits until a non-digit is found.
+					while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // Check for a digit
+						d += s.charAt(ndx++); // If found append it to the sequence
+					}
+
+					// A non-digit found following a decimal point and at least one digit
+					// has been seen, so it must be the exponent, the sentinel, or an error
+					if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // See if it is the exponent
+						return nextEnhancedUNumberState6(s, ndx + 1, d, dp, positive); // If so,
+						// process it and return the result
+
+						// See if it is the sentinel
+					} else if (ndx + 1 == s.length()) // See if it is the sentinel. If so process
+						return new EnhancedUNumber(d, dp, positive); // it and return the UNumber
+
+					// If it reaches here, the only thing it can be is an error
+					else
+						return null;
+				}
+
+				// If it reaches here means that there is no digit before or after the period
+				// which
+				// is an error, so we return a null.
+				else
+					return null;
+
+			}
+
+			// If it reaches here means that first character is not a digit or a decimal
+			// point, which is
+			// an error, so we return a null.
+			else
+				return null;
+		}
+
+		/**********
+		 * This is the recognizer pair for the acceptor above. The algorithms is the
+		 * same. The only difference is that these methods do not produce a UNumber.
+		 * They just return true or false based on what is found in the input. This
+		 * method processes the exponent, States 6, 7, and 8.
+		 * 
+		 * @param s
+		 *            The input string to be check to see if it is a UNumber
+		 * 
+		 * @param ndx
+		 *            The index of the location within the string
+		 * 
+		 * @return The Boolean value of whether or not the input is a valid UNumber
+		 */
+		private static boolean hasEnhancedUNumberState6(String s, int ndx) {
+			// State 6 // We start in state 6, process and exponent
+			if (s.charAt(ndx) == '+' || s.charAt(ndx) == '-') { // If exponent starts with a sign or a digit
+				// State 7 // Transition to state 7 and
+				ndx++; // accept the sign
+				if (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // See if the next character is a digit
+					ndx++; // If so, set up a loop to skip the rest of
+					while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9')
+						ndx++; // the digits. When the end
+					if (ndx + 1 == s.length())
+						return true; // of these digits is found, if the next is
+					else // the sentinel, return true, else return
+						return false; // false
+				} else // If the sign is not followed by a digit,
+					return false; // return false
+			} else if (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // If the first character of the
+				// State 8 // exponent is a digit, go to State 8
+				ndx++; // and skip the rest of the digits. If the
+				while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9')
+					ndx++; // character that stops the
+				if (ndx + 1 == s.length())
+					return true; // loop is the sentinel, return true, else the
+				else
+					return false; // input is not valid and return false
+			} else // If the first char of the exponent is not a sign or
+				return false; // a digit, it is an error, so return false
+		}
+
+		/**********
+		 * This is the UNumber recognizer for the acceptor above. The algorithms is the
+		 * same. The only difference is that these methods do not produce a UNumber.
+		 * They just return true or false based on what is found in the input.
+		 * 
+		 * This method processes the UNumber up to the exponent, FSM States 0 through 5
+		 * 
+		 * @param src
+		 * @return
+		 */
+		public static boolean hasEnhancedUNumber(String src) {
+			String s = src + ';'; // Add the sentinel at the end
+			int ndx = 0; // Start at the beginning of the string
+			// State 0 // We start in State 0
+			if (s.charAt(0) >= '0' && s.charAt(0) <= '9') { // If the first character is a digit,
+				// State 1 // transition to State 1 and process
+				ndx = 1; // as many more digits as is there
+				while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9')
+					ndx++; // When we encounter a
+				if (s.charAt(ndx) == '.') { // non-digit, see if it was a decimal
+					// State 2 // point. If so transition to State 2
+					ndx++; // Accept it and see if there are more
+					if (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9') { // is another digit. If so we
+						// State 3 // transition to State 3
+						ndx++; // Accept the digit and then skip as
+						while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9')
+							ndx++; // many as there are
+						// When the end of the digit sequence
+						if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') // If there is an 'E' or 'e'
+							return hasEnhancedUNumberState6(s, ndx + 1); // use State 6 method and return result.
+						// End of State 3, but no exponent, so see if we are at the sentinel. If so we
+						else if (ndx + 1 == s.length())
+							return true; // done and we return true
+						else
+							return false; // otherwise, error and return false
+
+						// State 2, but it is not a digit // Therefore, we see if it might be an
+					} else if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // an exponent. If so
+						return hasEnhancedUNumberState6(s, ndx + 1); // return was State6 method does
+
+						// State 2, but no digit or exponent // If it is the sentinel, then we
+					} else if (ndx + 1 == s.length())
+						return true; // return true
+
+					// State 2, but not a digit, an exponent or the sentinel
+					else
+						return false; // It is an error, so return false
+
+					// At the end of State 1, but it was not a decimal point that ended it; an
+					// exponent?
+				} else if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // Is it an 'E' or 'e'? If
+					return hasEnhancedUNumberState6(s, ndx + 1); // so, return the State6 method result
+
+					// At the end of State 1, not a decimal point or an exponent? The sentinel?
+				} else if (ndx + 1 == s.length()) // return, else check for the sentinel,
+					return true; // and return true if it is there,
+				else // else it is an error and
+					return false; // we should return false
+			}
+
+			// We are at State 0 the next character was not a digit, see if it is a decimal
+			// point
+			else if (s.charAt(0) == '.') { // If so, then we must transition to
+				// State 4 // State 4 to process any digits after
+				if (s.charAt(1) >= '0' && s.charAt(1) <= '9') { // the decimal point. Is there a digit?
+					// state 5 // If so, we need to accept the digit
+					ndx++; // and set up to skip as many more
+					while (s.charAt(ndx) >= '0' && s.charAt(ndx) <= '9')
+						ndx++; // digits as it can.
+					// The loop ends at an exponent, the
+					if (s.charAt(ndx) == 'E' || s.charAt(ndx) == 'e') { // sentinel, or an error. If an
+						return hasEnhancedUNumberState6(s, ndx + 1); // exponent, use hasUNumberState6.
+					} else if (ndx + 1 == s.length())
+						return true; // Not an exponent, see if sentinel
+					else
+						return false; // and return true else return false.
+				}
+				// Coming here means that there is no digit before or after the period.
+				else
+					return false; // That is an error!
+			}
+			// Coming here means the first character is not a digit or a decimal point.
+			else
+				return false; // That is an error
+		}
+
+		/**********
+		 * This implementation of toString converts the value to a String of a limited
+		 * size. If the characteristics is small enough (>= -3 to < 6) we will use
+		 * decimal as opposed to scientific notation format.
+		 * 
+		 * The routine may be required to limit the number of significant digits shown.
+		 * If it is to do this, is rounds up based on the most significant digit to be
+		 * truncated. If that digit is five or greater, the Least Significant Digit
+		 * (LSD) of the significant digits to be shown will be incremented. If that
+		 * results in a value larger than 9, we have a carry that must be resolved.
+		 * 
+		 * If the number of significant digits to be displayed is less than the
+		 * specified size, the entire value as it exists is displayed with no changes to
+		 * the digits and no rounding.
+		 * 
+		 * The routine does *not* alter the value of the UNumber.
+		 * 
+		 * @param size
+		 *            The maximum size of the generated string
+		 * 
+		 */
+		public String toString(int size) {
+			// System.out.println("this " + this+" d.length "+d.length +" dP "+dP);
+			// All the numbers come in as normalized UNumbers
+			String result = "";// initialize result to be empty string
+			// If fewer than 8 characters is requested, ignore the value and use 8 instead.
+			if (size <= 8)
+				size = 8;
+			int exp = this.dP; // Reduce by one since we put the MSD to the
+			// left of the decimal point 
+			if (!this.s) // check to see if number is a negative
+				result = "-"; // add negative sign to the result
+
+			// This rounds the digits to only size long
+			if (d.length >= size) { // if given more digits than the size
+				if (d[size - 1] >= 5) {
+					if (d[size - 2] != 9) { // check for carry over
+						d[size - 2] += 1; // if no carry over add 1 to number
+						size += 1; // change size for display
+					}
+					int j = size - 1; // set local to move up digits until we reach a number that isn't 9
+					while (d[j] == 9 && j > 0) { // also keep it so we are in the array
+						d[j] = 0; // set all carry over digits to 0
+						j--;// move up the number
+					}
+					size -= 1;// remove the last in display
+					d[j] += 1;// add one to the last j value
+				}
+			}
+
+			int ndx = 0;// represents the location
+			if (exp > 0 && exp <= 6) { // for numbers to the right of the decimal
+				while (ndx < d.length && ndx < exp)
+					result += d[ndx++]; // display all numbers until the decimal
+				while (ndx < exp) {// if not enough numbers provided fill in significant zeros
+					result += '0';
+					ndx++;
+				}
+				if((ndx < d.length && ndx < size ))
+				result += '.';// add the decimal point
+				while (ndx < d.length && ndx < size )// keep going for all digits given or the size
+					result += d[ndx++];
+				return result;
+			} else if (exp >= -3 && exp <= 0) {// always lead with a 0
+				result += "0.";
+				for (int neg = exp; neg < 0; neg++) // add significant zeros if not enough digits are provided
+					result += '0';
+
+				// THIS CODE FOR ADDED FUNCTIONLILTY NOT FOR TASK 1
+				while (ndx < d.length && ndx < size) // display the numbers until the end
+					result += d[ndx++];
+
+				// THIS CODE WORKS FOR TASK 1
+				// while (ndx < d.length-1 && ndx < size) // display the numbers until the end
+				// result += d[ndx++];
+
+				// if (result.charAt(result.length()-1) >= '1')//if there is a non-zero number
+				// keep adding
+				// result += d[ndx];
+				return result;
+			} else if (exp < -3 || exp > 6) {// do the exponents
+				result += d[ndx++];
+				
+				if(ndx < d.length)
+					result += ".";
+				while (ndx < d.length) {
+					result += d[ndx++];
+				}
+				result += "E";
+				if (exp < 0)
+					result += (exp - 1); // If the result is negative, the sign will automatically be inserted
+				else
+					result += "+" + (exp - 1); // For positive values, we must manually insert the "+" sign
+				return result;
+			} else
+				return null;
+		}
+
+		/**********
+		 * The Addition operation adds the second operand to this object's value (this =
+		 * this + that) The code implements the addition in a very simplistic manner,
+		 * sacrificing speed and space for a very simple algorithm that mirrors how
+		 * people do addition by hand.
+		 * 
+		 * @param that
+		 *            The second operand that is added to this object's value
+		 */
+		public void add(EnhancedUNumber that) {
+			UNumber temp1;
+			UNumber temp2;
+			if (this.s == that.s) {
+
+				// The signs are the same, so we can add the two unsigned numbers together and
+				// then
+				// copy the sign from either
+				temp1 = new UNumber(this, that); // Establish two working values that are decimal
+				temp2 = new UNumber(that, this); // point aligned
+
+				// Work from Least Significant Digit (LSD) toward Most Significant Digit (MSD)
+				// and
+				// add digit to digit
+				boolean carry = false;
+				for (int i = temp1.d.length - 1; i >= 0; i--) {
+					// If the previous digit addition had a carry, add it in to this digit
+					temp1.d[i] += (byte) (temp2.d[i] + (carry ? 1 : 0));
+					if (temp1.d[i] > 9) { // If the resulting addition is > 9, there is a carry here
+						temp1.d[i] -= 10; // so reduce the result by 10. It can't be more than 19
+						carry = true; // (9 + 9 + 1 = 19) and set the carry for the next digit
+										// addition
+					} else
+						carry = false; // If the digit addition is <= 9, there is no carry
+				}
+
+				// If there is a carry at the end of the loop, we need one more digit of
+				// significance
+				if (carry) {
+					d = new byte[temp1.d.length + 1]; // Establish a mantissa array that is one digit
+														// larger
+					d[0] = 1; // If there was a carry, that new digit must be
+								// a "1"
+					for (int i = 0; i < temp1.d.length; i++)
+						d[i + 1] = temp1.d[i]; // Copy over rest of
+					// the digits
+					temp1.dP++; // Increase the power of 10 by one
+					temp1.d = d; // Establish this new mantissa array as the
+									// result's mantissa
+				}
+			}
+
+			else {
+				// The signs differ, so we subtract the the negative value from the positive
+				// value
+				// We will put the positive value in temp1 and the negative in temp2
+				if (this.s) {
+					temp1 = new UNumber(this, that);
+					temp2 = new UNumber(that, this);
+				} else {
+					temp2 = new UNumber(this, that);
+					temp1 = new UNumber(that, this);
+				}
+
+				// Work from Least Significant Digit (LSD) toward Most Significant Digit (MSD)
+				// and
+				// subtract digit from digit. We start off with no borrowing at the LSD
+				boolean borrow = false;
+				for (int i = temp1.d.length - 1; i >= 0; i--) {
+					// If the previous subtraction resulted in a borrow, we must subtract an
+					// additional
+					// 1 from this digit
+					temp1.d[i] = (byte) (temp1.d[i] - temp2.d[i] - (borrow ? 1 : 0));
+					if (temp1.d[i] < 0) { // If the resulting subtraction is < 0, there is a borrow
+						temp1.d[i] += 10; // here so add 10 to the result. The result cannot be
+											// less than -10 (0 - 9 - 1 = -10)
+						borrow = true; // and set the borrow for the next digit subtraction
+					} else
+						borrow = false; // If the digit subtraction is >= 0, there is no borrow
+				}
+
+				// if the borrow is true, the negative value was larger and we must invert the
+				// values
+				// and set the resulting sign to negative
+				if (borrow) {
+					// For all but the LSD, we must subtract the digit from 9 (10 - digit - 1 for
+					// the
+					// next digit to the right borrow)
+					for (int i = 0; i < temp1.d.length - 1; i++)
+						temp1.d[i] = (byte) (9 - temp1.d[i]);
+
+					// For the LSD, we subtract the digit from 10, since there are no more digits
+					// that
+					// require a borrow
+					temp1.d[temp1.d.length - 1] = (byte) (10 - temp1.d[temp1.d.length - 1]);
+
+					// Resolve any carries working back from the LSD to the MSD
+					for (int i = temp1.d.length - 1; i > 0; i--)
+						if (temp1.d[i] >= 10) {
+							temp1.d[i] -= 10;
+							temp1.d[i - 1]++;
+						}
+
+					// The resulting number is negative
+					temp1.s = false;
+				} else
+					temp1.s = true; // Since the borrow was false at the end, the positive value
+									// was larger, so then is the result
+			}
+
+			// The result of the addition (or subtraction) is in temp1, so we must first
+			// normalize it
+			// and then move it into this object's attributes
+			normalize(temp1);
+			this.d = temp1.d;
+			this.dP = temp1.dP;
+			this.s = temp1.s;
+		}
+
+		/**********
+		 * The subtract operation negates the second operand and uses the add operator
+		 * (this = this - that) The code uses a temporary for the second operand so the
+		 * callers second operand is not changed
+		 * 
+		 * @param that
+		 *            The second operand that is subtracted from the value of this
+		 *            object's value
+		 */
+		public void sub(EnhancedUNumber that) {
+			UNumber temp = new UNumber(that);
+			temp.s = !temp.s;
+			this.add(temp);
+		}
+
+		/**********
+		 * The multiply operation implements multiplication is the traditional, by
+		 * hand-hand manner, where each digit of the multiplicand is multiplied by each
+		 * digit of the multiplier and adding into the proper digit of the product using
+		 * the index of the multiplier digit as the base for the summation. Since we
+		 * have unlimited number of digits, the intermediate results can become
+		 * arbitrarily large, so the carry must be resolved into the product after each
+		 * digit multiplication.
+		 * 
+		 * @param that
+		 *            The multiplier
+		 */
+		public void mpy(EnhancedUNumber that) {
+			// The temporary product must be at least two digits longer than the result, one
+			// digit to
+			// deal with the possible loss of precision when normalizing is required, and
+			// one for
+			// rounding.
+			byte[] product = new byte[this.d.length + (that.d.length > 2 ? that.d.length : 2)];
+			byte[] multiplicand = this.d;
+			byte[] multiplier = that.d;
+
+			// If either the multiplicand or the multiplier is zero,
+			// the product is zero, so return a default zero
+			if (multiplicand[0] == 0 || multiplier[0] == 0) {
+				for (int i = 0; i < this.d.length; i++)
+					this.d[i] = 0;
+				dP = 0;
+				s = true;
+				return;
+			}
+
+			// The product is not zero, so compute the product using the by-hand algorithm
+
+			// Zero the product
+			for (int p = 0; p < product.length; p++)
+				product[p] = 0;
+
+			// For each digit in the multiplier
+			for (int r = multiplier.length - 1; r >= 0; r--) {
+
+				// start with the proper digit in the product based on the location in the
+				// multiplicand and multiplier
+				int p = multiplicand.length + r;
+
+				// Computer the product for each digit in the multiplicand and add it into the
+				// product
+				for (int d = multiplicand.length - 1; d >= 0; d--) {
+					product[p] += multiplicand[d] * multiplier[r];
+
+					// Resolve any carries by ensuring each product digit is not larger than 9
+					// (Since none of the digits were larger than 9, we can stop as soon as we find
+					// one that is not larger than 9 as we resolve the carries working to the left.)
+					int c = p;
+					while (c > 0 && product[c] > 9) { // Propagate the carries to the left
+						product[c - 1] += product[c] / 10; // Add the carry to the digit to the left
+						product[c--] %= 10; // Use the unit's value for this digit
+					}
+
+					// use the next product digit to the left;
+					p--;
+
+				}
+			}
+
+			// We now have the product, but it may not be normalized. The first digit of the
+			// product
+			// must not be zero since the product is not zero. If at this point that leading
+			// digit is
+			// zero, then we must discard that one zero digit and adjust the size and the
+			// exponent
+			// down one. (There can be at most one zero digit given the multiplicand and the
+			// multiplier
+			// were both non-zero and normalized.)
+			boolean wasNormalized = false;
+			if (product[0] == 0) {
+				// The product must be normalized and transferred into this object
+				for (int i = 0; i < product.length - 1; i++)
+					product[i] = product[i + 1];
+				// It is not necessary to set the LSD to zero, because it will not be used...
+				// two
+				// excess digits were set up in the product... one for normalization and one for
+				// rounding.
+				product[product.length - 1] = 0;
+
+				// Signal that the value was normalized (needed to correct the characteristic)
+				wasNormalized = true;
+			}
+
+			// Since the product is longer than the result array, we need to discard the
+			// excess digits
+			// and that leads us to wanting to round the result if the digit to the right of
+			// the LSD is
+			// five or larger.
+			boolean roundingCarry = false;
+			if (product[this.d.length] >= 5) {
+				// Since the LSD was a 5 or larger, we must round and propagate the carry to the
+				// left.
+				int i = d.length - 1;
+				product[i]++;
+				while (i > 0 && product[i] > 9) {
+					product[i - 1]++; // Increase the next digit to the left to compensate for > 9
+					product[i--] -= 10; // Decrease this digit by ten to balance
+				}
+
+				// If the carry propagates all the way from the LSD to the MSD and we carry off
+				// the end,
+				// all of those intermediate digits must have been "9"s before the rounding and
+				// they are
+				// now zeros.
+				if (i == 0 && product[0] > 9) {
+					// Set flag so we know we are doing this so we can add one to the characteristic
+					roundingCarry = true;
+					// Set the MSD to 1, since all the rest of them must be zeros
+					product[0] = 1;
+				}
+			}
+
+			// Compute the characteristic (the sum of the two powers of ten)
+			this.dP += that.dP;
+			if (wasNormalized)
+				this.dP--; // Adjust down if there was a leading zero in the product
+			if (roundingCarry)
+				this.dP++; // Adjust up if the rounding resulting in a carry off the
+							// left end
+
+			// The product must be transferred into this object
+			for (int i = 0; i < this.d.length; i++)
+				this.d[i] = product[i];
+
+			// Compute the sign of the product
+			this.s = this.s == that.s;
+		}
+
+		/**********
+		 * The divide operation implements division by means of repeated subtraction,
+		 * producing as many significant digits in the quotient as in the dividend (this
+		 * object) and the quotient replaces the dividend. This is a faster algorithm
+		 * than the simpler Div2 below. This algorithm assumes the numbers are
+		 * normalized.
+		 * 
+		 * @param that
+		 *            The divisor
+		 */
+		public void div(EnhancedUNumber that) {
+			byte[] dividend = new byte[this.d.length + that.d.length + 1];
+			byte[] quotient = new byte[this.d.length + 2];
+			byte[] divisor = that.d;
+
+			// Check for divide by zero and return close to infinite
+			if (that.d[0] == 0) {
+				for (int ndx = 0; ndx < this.d.length; ndx++)
+					this.d[ndx] = 9;
+				this.dP = 999999;
+				this.s = true;
+				return;
+			}
+
+			// Make working copy of the dividend, which is destroyed during the process
+			for (int i = 0; i < this.d.length; i++)
+				dividend[i] = this.d[i];
+			for (int i = this.d.length; i < dividend.length; i++)
+				dividend[i] = 0;
+
+			// Initialize the quotient to zero, which will replace the dividend at the end
+			// of this
+			// process
+			for (int i = 0; i < quotient.length; i++)
+				quotient[i] = 0;
+
+			// Digit by digit, subtract the divisor from the dividend until a borrow occurs,
+			// add it
+			// back in, shift the divisor right one digit, do it again, until all of the
+			// digits in the
+			// quotient have been filled in.
+			for (int qIndex = 0; qIndex < quotient.length; qIndex++) {
+				boolean okToContinue = true;
+				while (okToContinue && quotient[qIndex] < 9) {
+					boolean borrow = false;
+					for (int i = divisor.length - 1; i >= 0; i--) {
+						// If the previous subtraction resulted in a borrow, we must subtract an
+						// additional 1 from this digit
+						dividend[i + qIndex] = (byte) (dividend[i + qIndex] - divisor[i] - (borrow ? 1 : 0));
+						if (dividend[i + qIndex] < 0) { // If the resulting subtraction is < 0, there
+														// is a borrow here
+							dividend[i + qIndex] += 10; // so add 10 to the result. The result cannot
+														// be less than -10 (0 - 9 - 1 = -10)
+							borrow = true; // and set the borrow for the next digit subtraction
+						} else
+							borrow = false; // If the digit subtraction is >= 0, there is no borrow
+					}
+
+					if (borrow) { // If a borrow is true at the end add back the divisor
+						if (qIndex > 0 && dividend[qIndex - 1] > 0) {
+							dividend[qIndex - 1]--;
+							quotient[qIndex]++;
+						} else {
+							okToContinue = false; // Stop the loop
+							boolean carry = false;
+							for (int i = divisor.length - 1; i >= 0; i--) {
+								// If the previous addition resulted in a carry, we must add an
+								// additional 1 to this digit
+								dividend[i + qIndex] = (byte) (dividend[i + qIndex] + divisor[i] + (carry ? 1 : 0));
+								if (dividend[i + qIndex] > 9) { // If the resulting subtraction is > 9,
+																// there is a carry here
+									dividend[i + qIndex] -= 10; // so subtract 10 to the result. The
+																// result cannot be greater than
+																// 19 (9 + 9 + 1 = +19)
+									carry = true; // and set the carry for the next digit addition
+								} else
+									carry = false; // If the digit addition is <= 9, there is no carry
+							}
+						}
+					} else
+						quotient[qIndex]++; // If the subtraction was successful, count it
+				}
+			}
+
+			this.dP = this.dP - that.dP + 1;
+			this.s = this.s == that.s;
+
+			// We now have the quotient, but it may not be normalized. The first digit of
+			// the product
+			// must not be zero since the quotient is not zero. If at this point that
+			// leading digit is
+			// zero, then we must discard that one zero digit and adjust the size and the
+			// exponent down
+			// one. (There can be at most one zero digit given the multiplicand and the
+			// multiplier
+			// were both non-zero and normalized.)
+			boolean wasNormalized = false;
+			if (quotient[0] == 0) {
+				// The product must be normalized and transferred into this object
+				for (int i = 0; i < quotient.length - 1; i++)
+					quotient[i] = quotient[i + 1];
+				quotient[quotient.length - 1] = 0;
+				// signal that the value was normalized (needed to correct the characteristic)
+				wasNormalized = true;
+			}
+
+			// Since the quotient is longer than the result array, we need to discard the
+			// excess
+			// digits and that leads us to wanting to round the result if the digit to the
+			// right of
+			// the LSD is five or larger.
+			boolean roundingCarry = false;
+			if (quotient[this.d.length] >= 5) {
+				// Since the LSD was a 5 or larger, we must round and propagate the carry to the
+				// left.
+				int i = d.length - 1;
+				quotient[i]++;
+				while (i > 0 && quotient[i] > 9) {
+					quotient[i - 1]++; // Increase the next digit to the left to compensate for > 9
+					quotient[i--] -= 10; // Decrease this digit by ten to balance
+				}
+
+				// If the carry propagates all the way from the LSD to the MSD and we carry off
+				// the
+				// end, all of those intermediate digits must have been "9"s before the rounding
+				// and
+				// they are now zeros.
+				if (i == 0 && quotient[0] > 9) {
+					// Set flag so we know we are doing this so we can add one to the characteristic
+					roundingCarry = true;
+					// Set the MSD to 1, since all the rest of them must be zeros
+					quotient[0] = 1;
+				}
+			}
+
+			// Compute the characteristic (the sum of the two powers of ten)
+			if (wasNormalized)
+				this.dP--; // Adjust down if there was a leading zero in the quotient
+			if (roundingCarry)
+				this.dP++; // Adjust up if the rounding resulting in a carry off the
+							// left end
+
+			// The quotient must be transferred into this object
+			for (int i = 0; i < this.d.length; i++)
+				this.d[i] = quotient[i];
+		}
+
+		public static Double[] InitalValues = { 0.0, 1.0, 1.414213562, 1.732050808, 2.0, 2.236067977, // sqrt 0 -5
+				2.449489743, 2.645751311, 2.828427125, 3.0, 3.16227766, // sqrt 6-10
+				3.31662479, 3.464101615, 3.605551275, 3.741657387, 3.872983346, // sqrt 11-15
+				4.0, 4.123105626, 4.242640687, 4.358898944, 4.472135955, // sqrt 16-20
+				4.582575695, 4.69041576, 4.795831523, 4.898979486, 5.0, // sqrt 21-25
+				5.099019514, 5.196152423, 5.291502622, 5.385164807, 5.477225575, // sqrt 26-30
+				5.567764363, 5.656854249, 5.744562647, 5.830951895, 5.916079783, // sqrt 31-35
+				6.0, 6.08276253, 6.164414003, 6.244997998, 6.32455532, // sqrt 36-40
+				6.403124237, 6.480740698, 6.557438524, 6.633249581, 6.708203932, // sqrt 41-45
+				6.782329983, 6.8556546, 6.92820323, 7.0, 7.071067812, // sqrt 46-50
+				7.141428429, 7.211102551, 7.280109889, 7.348469228, 7.416198487, // sqrt 51-55
+				7.483314774, 7.549834435, 7.615773106, 7.681145748, 7.745966692, // sqrt 56-60
+				7.810249676, 7.874007874, 7.937253933, 8.0, 8.062257748, // sqrt 61-65
+				8.124038405, 8.185352772, 8.246211251, 8.306623863, 8.366600265, // sqrt 66-70
+				8.426149773, 8.485281374, 8.544003745, 8.602325267, 8.660254038, // sqrt 71-75
+				8.717797887, 8.774964387, 8.831760866, 8.888194417, 8.94427191, // sqrt 76-80
+				9.0, 9.055385138, 9.110433579, 9.16515139, 9.219544457, // sqrt 81-85
+				9.273618495, 9.327379053, 9.38083152, 9.433981132, 9.486832981, // sqrt 86-90
+				9.539392014, 9.591663047, 9.643650761, 9.695359715, 9.746794345, // sqrt 91-95
+				9.797958971, 9.848857802, 9.899494937, 9.949874371 // sqrt 96-99
+		};
+
+		public static Byte[] InitalB1 = { 
+				0, 1, 1, 1, 2, 2, // sqrt 0 -5
+				2, 2, 2, 3, 3, // sqrt 6-10
+				3, 3, 3, 3, 3, // sqrt 11-15
+				4, 4, 4, 4, 4, // sqrt 16-20
+				4, 4, 4, 4, 5, // sqrt 21-25
+				5, 5, 5, 5, 5, // sqrt 26-30
+				5, 5, 5, 5, 5, // sqrt 31-35
+				6, 6, 6, 6, 6, // sqrt 36-40
+				6, 6, 6, 6, 6,// sqrt 41-45
+				6, 6, 6, 7, 7, // sqrt 46-50
+				7, 7, 7, 7, 7, // sqrt 51-55
+				7, 7, 7, 7, 7, // sqrt 56-60
+				7, 7, 7, 8, 8, // sqrt 61-65
+				8, 8, 8, 8, 8, // sqrt 66-70
+				8, 8, 8, 8, 8, // sqrt 71-75
+				8, 8, 8, 8, 8, // sqrt 76-80
+				9, 9, 9, 9, 9, // sqrt 81-85
+				9, 9, 9, 9, 9,// sqrt 86-90
+				9, 9, 9, 9, 9,// sqrt 91-95
+				9, 9, 9, 9, // sqrt 96-99
+		};
+		
+		
+		public static Byte[] Initald = { 
+				0, 10, 14, 1, 20, 22, // sqrt 0 -5
+				24, 26, 28, 30, 32, // sqrt 6-10
+				30, 30, 36, 3, 3, // sqrt 11-15
+				40, 4, 42, 44, 4, // sqrt 16-20
+				46, 4, 48, 4, 50, // sqrt 21-25
+				5, 52, 5, 54, 5, // sqrt 26-30
+				56, 5, 5, 58, 5, // sqrt 31-35
+				60, 6, 62, 62, 6, // sqrt 36-40
+				64, 6, 66, 66, 6,// sqrt 41-45
+				68, 7, 7, 70, 7, // sqrt 46-50
+				7, 72, 7, 7, 74, // sqrt 51-55
+				7, 7, 76, 7, 7, // sqrt 56-60
+				78, 7, 7, 80, 8, // sqrt 61-65
+				8, 82, 82, 8, 84, // sqrt 66-70
+				84, 8, 8, 86, 8, // sqrt 71-75
+				8, 88, 88, 8, 8, // sqrt 76-80
+				90, 9, 9, 92, 92, // sqrt 81-85
+				9, 9, 94, 94, 9,// sqrt 86-90
+				9, 96, 96, 9, 9,// sqrt 91-95
+				98, 98, 9, 9, // sqrt 96-99
+		};
+
+		
+		public static Byte[] InitalB2 = { 
+				0, 0, 4, 7, 0, 2, // sqrt 0 -5
+				4, 6, 8, 0, 2, // sqrt 6-10
+				3, 5, 6, 7, 9, // sqrt 11-15
+				0, 1, 2, 4, 5, // sqrt 16-20
+				6, 7, 8, 9, 0, // sqrt 21-25
+				1, 2, 3, 4, 5, // sqrt 26-30
+				6, 7, 7, 8, 9, // sqrt 31-35
+				0, 1, 2, 2, 3, // sqrt 36-40
+				4, 5, 6, 6, 7,// sqrt 41-45
+				8, 9, 9, 0, 1, // sqrt 46-50
+				1, 2, 3, 3, 4, // sqrt 51-55
+				5, 5, 6, 7, 7, // sqrt 56-60
+				8, 9, 9, 0, 1, // sqrt 61-65
+				1, 2, 2, 3, 4, // sqrt 66-70
+				4, 5, 5, 6, 7, // sqrt 71-75
+				7, 8, 8, 9, 9, // sqrt 76-80
+				0, 1, 1, 2, 2, // sqrt 81-85
+				3, 3, 4, 4, 5,// sqrt 86-90
+				5, 6, 6, 7, 7,// sqrt 91-95
+				8, 8, 9, 9, // sqrt 96-99
+		};
+	}
