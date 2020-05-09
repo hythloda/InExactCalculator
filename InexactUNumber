@@ -1,0 +1,418 @@
+package uNumberLibrary;
+
+public class InexactUNumber extends EnhancedUNumber {
+
+	/**
+	 * @author Amanda Martin
+	 * 
+	 * @version 1.0 Baseline
+	 * 
+	 */
+
+	/******************************************************************************************
+	 * The following constructors invoke the corresponding superclass constructors.
+	 * 
+	 */
+	// protected String error; // string containing the error
+	// protected int errSize; // This is the characteristic (the power of 10) for
+	// error
+	// protected byte e[]; // The mantissa as a sequence of digits in the error,
+	// most significant digits
+	// (MSD)
+	// is in d[0]. The implied decimal point is to the left of the MSD
+	protected EnhancedUNumber Error;
+	protected EnhancedUNumber Value;
+
+	public InexactUNumber(String digits, int charateristic, boolean sign, String err, int errSize) {
+		this.Value = new EnhancedUNumber(digits, charateristic, sign);
+		this.Error = new EnhancedUNumber(err, errSize, true);
+	}
+
+	/**********
+	 * This portion of the UNumber parser processes states 6, 7, and 8 of the
+	 * UNumber recognizer that processes a continuation after finding and "E" or an
+	 * "e".
+	 * 
+	 * @param s
+	 *            The string containing the UNumber
+	 * 
+	 * @param ndx
+	 *            The index into the UNumber string
+	 * 
+	 * @param d
+	 *            The string containing just the numeric digits
+	 * 
+	 * @param dp
+	 *            The location of the decimal point
+	 * 
+	 * @param sign
+	 *            The sign of the whole UNumber
+	 * 
+	 * @return The UNumber after it has been parsed
+	 */
+	public InexactUNumber(EnhancedUNumber value, EnhancedUNumber error) {
+		this.Error = new EnhancedUNumber(error);
+		this.Value = new EnhancedUNumber(value, Math.abs(this.Error.dP) + 2 + value.dP);
+
+	}
+
+	public InexactUNumber(InexactUNumber value) {
+		this.Value = value.Value;
+		this.Error = value.Error;
+	}
+
+	public void inexactNormalize() {
+		normalize(this.Value);
+		normalize(this.Error);
+	}
+
+	public void roundTo(int size) {
+		// Sy//stem.out.println("size"+size);
+				this.Value = new EnhancedUNumber(this.Value, Math.abs(size) + 2);// truncates number to size long
+				String result = "";
+
+				// this is for large numbers to round to nearest 1 or 10
+
+				if (size > (this.Error.dP - 1) && this.Value.dP > 2) {
+					if (size == 3 || size == 2) {
+						//this.Error = new EnhancedUNumber("1", 4 - size, true, 1);
+						d = new byte[this.Value.dP];
+						int i = 0;
+						if ((this.Value.d[size] == 5 || this.Value.d[size] == 6 || this.Value.d[size] == 7
+								|| this.Value.d[size] == 8 || this.Value.d[size] == 9))
+							this.Value.d[size - 1] += 1;
+						while (i < size) {
+							d[i] = this.Value.d[i];
+							result += this.Value.d[i];
+							i++;
+						} 
+						if (i < this.Value.dP) {
+							d[i] = 0;
+							result += 0;
+						}
+					//	System.out.println("begning of rountTo " + this.Value);
+
+						this.Value.d = d;
+						this.Value = new EnhancedUNumber(result, 3, true, 3);
+
+					}
+					return;
+				}
+				int len = this.Error.d.length;
+				int exp = this.Error.dP; // Reduce by one since we put the MSD to the
+
+				// This is for the rounding of decimal points to 5
+				if (this.Error.d.length >= 2 && this.Error.d[len - 2] == 1
+						&& (this.Error.d[len - 1] == 4 || this.Error.d[len - 1] == 6))
+					this.Error.d[len - 1] = 5;
+				if (len >= 2 && this.Error.d[len - 2] == 9) {// if digit is 9 and rounded need to round up
+					this.Error.dP += 1;
+					exp = this.Error.dP;// reset exp for later
+					this.Error.d[len - 2] = 1;// add one to the last digit to round
+					d = new byte[len - 1]; // Establish a array that is one digit smaller
+					for (int i = 0; i <= len - 2; i++) {
+						d[i] = this.Error.d[i]; // Copy over rest of
+					}
+					this.Error.d = d; // change error to the new array
+					len = this.Error.d.length;// set the length to the new length
+				}
+
+				// This is to truncate the error if it is only a 1 2 or 3
+				if (len >= 2 && (this.Error.d[len - 1] == 3 || this.Error.d[len - 1] == 2 || this.Error.d[len - 1] == 1)) {
+					d = new byte[len - 1]; // Establish a array that is one digit smaller
+					for (int i = 0; i < len - 1; i++)
+						d[i] = this.Error.d[i]; // Copy over rest of
+					this.Error.d = d;
+					len = this.Error.d.length;
+				}
+
+				// This is to truncate the error if it is only a 7 8 or 9
+				if (len >= 2 && (this.Error.d[len - 1] == 7 || this.Error.d[len - 1] == 8 || this.Error.d[len - 1] == 9)) {
+					d = new byte[len - 1]; // Establish a array that is one digit smaller
+					for (int i = 0; i < len - 1; i++)
+						d[i] = this.Error.d[i]; // Copy over rest of
+					d[len - 2] += 1;// add one to the last digit to round
+					this.Error.d = d;
+					len = this.Error.d.length;
+				}
+
+				// This rounds the digits to only size long
+				if (this.Value.d[this.Value.d.length - 1] == 9 && this.Value.d.length > (Math.abs(this.Error.dP) + 1)) {
+					this.Value.d[this.Value.d.length - 2] += 1;
+					this.Value.d[this.Value.d.length - 1] = 0;
+				}
+
+				// this removes non significant zeros
+				len = this.Error.d.length;
+				int i = 0;
+				int j = len - 1; // set local to move up digits until we reach a number that isn't 9
+				if (len > 1 && this.Error.d[j - 1] == 0 && exp < 0) {
+					while (this.Error.d[j] == 0) { // also keep it so we are in the array
+						j--;// move up the number
+						i++;// count the zeros
+					}
+					len -= i;
+					d = new byte[len]; // Establish a array that is one digit smaller
+					for (int e = 0; e < len; e++) {
+						d[e] = this.Error.d[e]; // Copy over rest of
+					}
+					this.Error.d = d;
+				}
+				//System.out.println("end of rountTo " + this.Value);
+			//	this.Value = new EnhancedUNumber(this.Value);
+				
+				//get rid of non significant Value terms for large numbers
+				int k=0;
+				if(this.Value.dP>2 &&this.Error.dP>1) {
+					d = new byte[this.Value.dP];
+				while(k<=(this.Value.dP-this.Error.dP)) {
+					d[k]=this.Value.d[k];
+					k++;
+				}
+				while(k<this.Value.dP) {
+					d[k]=0;
+					k++;
+				}
+					
+				this.Value.d=d;
+				}
+	}
+
+	/**********
+	 * The Addition operation adds the second operand to this object's value (this =
+	 * this + that) The code implements the addition in a very simplistic manner,
+	 * sacrificing speed and space for a very simple algorithm that mirrors how
+	 * people do addition by hand.
+	 * 
+	 * @param that
+	 *            The second operand that is added to this object's value
+	 */
+	public void add(InexactUNumber that) {
+		this.Value.add(that.Value);
+		this.Error.add(that.Error);
+		roundTo(that.Error.dP);
+
+	}
+
+	/**********
+	 * The subtract operation negates the second operand and uses the add operator
+	 * (this = this - that) The code uses a temporary for the second operand so the
+	 * callers second operand is not changed
+	 * 
+	 * @param that
+	 *            The second operand that is subtracted from the value of this
+	 *            object's value
+	 */
+	public void sub(InexactUNumber that) {
+		this.Value.sub(that.Value);
+		this.Error.add(that.Error);
+		roundTo(that.Error.dP);
+
+	}
+
+	/**********
+	 * The multiply operation implements multiplication is the traditional, by
+	 * hand-hand manner, where each digit of the multiplicand is multiplied by each
+	 * digit of the multiplier and adding into the proper digit of the product using
+	 * the index of the multiplier digit as the base for the summation. Since we
+	 * have unlimited number of digits, the intermediate results can become
+	 * arbitrarily large, so the carry must be resolved into the product after each
+	 * digit multiplication.
+	 * 
+	 * @param that
+	 *            The multiplier
+	 */
+	public void mpy(InexactUNumber that) {
+		EnhancedUNumber temp = new EnhancedUNumber(this.Error, 50);// first term of product error
+		EnhancedUNumber temp2 = new EnhancedUNumber(that.Error, 50);// second term of product error
+		EnhancedUNumber LProd = new EnhancedUNumber(this.Value, that.Value.d.length);// to have more sig figs in product
+		temp.div(this.Value);// divide each term by its corresponding value to weigh it
+		temp2.div(that.Value);// divide each term by its corresponding value to weigh it
+		this.Value.mpy(that.Value);// do this here so the above is the value and not product
+		LProd.mpy(that.Value);// higher sig fig multiplication
+		// now this.Value is really the product
+		temp.add(temp2);// add the two errors
+		temp.mpy(this.Value);// multiply by the product
+		this.Error = new EnhancedUNumber(temp, this.Error.d.length);// result the EnhancedUnumber Error to the found
+																	// error
+		this.roundTo(this.Error.d.length);
+		this.Value = LProd;
+		//System.out.println(that.Error.dP);
+		roundTo(that.Error.dP);
+
+	}
+
+	/**********
+	 * The divide operation implements division by means of repeated subtraction,
+	 * producing as many significant digits in the quotient as in the dividend (this
+	 * object) and the quotient replaces the dividend. This is a faster algorithm
+	 * than the simpler Div2 below. This algorithm assumes the numbers are
+	 * normalized.
+	 * 
+	 * @param that
+	 *            The divisor
+	 */
+	public void div(InexactUNumber that) {
+
+		EnhancedUNumber temp = new EnhancedUNumber(this.Error);// first term of product error
+		EnhancedUNumber temp2 = new EnhancedUNumber(that.Error);// second term of product error
+
+		temp.div(this.Value);// divide each term by its corresponding value to weigh it
+		temp2.div(that.Value);// divide each term by its corresponding value to weigh it
+
+		this.Value.div(that.Value);// do this here so the above is the value and not product
+		// now this.Value is really the quotient
+		temp.add(temp2);// add the two errors
+		temp.mpy(this.Value);// multiply by the quotient
+		this.Error = temp;// result the EnhancedUnumber Error to the found error
+		roundTo(that.Error.dP);
+
+	}
+
+	/**********
+	 * Compute the square root of this object, replacing this object with the
+	 * approximate value of the square root computed using Newton's Method.
+	 */
+	public void squareRoot() {
+		// error analysis from http://lectureonline.cl.msu.edu/~mmp/labs/error/e2.htm
+		this.Error.div(this.Value);// divide the error by the value to weigh it
+		//this.Error.mpy(new EnhancedUNumber("5", -1, true, this.Error.dP));// times by 1/2
+		//this.Error.div(new EnhancedUNumber("2", 1, true, this.Error.dP));// times by 1/2
+		this.Value.squareRoot(); // changes this value to the square root of the number
+		this.Error.mpy(this.Value);// changes Error term to be the new error
+		roundTo(this.Error.dP);
+	}
+
+	/**********
+	 * This implementation of toString converts the value to a String of a limited
+	 * size. If the characteristics is small enough (>= -3 to < 6) we will use
+	 * decimal as opposed to scientific notation format.
+	 * 
+	 * The routine may be required to limit the number of significant digits shown.
+	 * If it is to do this, is rounds up based on the most significant digit to be
+	 * truncated. If that digit is five or greater, the Least Significant Digit
+	 * (LSD) of the significant digits to be shown will be incremented. If that
+	 * results in a value larger than 9, we have a carry that must be resolved.
+	 * 
+	 * If the number of significant digits to be displayed is less than the
+	 * specified size, the entire value as it exists is displayed with no changes to
+	 * the digits and no rounding.
+	 * 
+	 * The routine does *not* alter the value of the UNumber.
+	 * 
+	 * @param size
+	 *            The maximum size of the generated string
+	 * 
+	 */
+	public String toStringBestEstimate() {
+		if(this.Value.dP<=2&&this.Error.dP<2)
+			roundTo(Math.abs(this.Error.dP) + this.Value.dP - 1);
+		return this.Value.toString(this.Value.d.length + 1);
+
+	}
+
+	/**********
+	 * This implementation of toString converts the value to a String of a limited
+	 * size. If the characteristics is small enough (>= -3 to < 6) we will use
+	 * decimal as opposed to scientific notation format.
+	 * 
+	 * The routine may be required to limit the number of significant digits shown.
+	 * If it is to do this, is rounds up based on the most significant digit to be
+	 * truncated. If that digit is five or greater, the Least Significant Digit
+	 * (LSD) of the significant digits to be shown will be incremented. If that
+	 * results in a value larger than 9, we have a carry that must be resolved.
+	 * 
+	 * If the number of significant digits to be displayed is less than the
+	 * specified size, the entire value as it exists is displayed with no changes to
+	 * the digits and no rounding.
+	 * 
+	 * The routine does *not* alter the value of the UNumber.
+	 * 
+	 * @param size
+	 *            The maximum size of the generated string
+	 * 
+	 */
+	public String toStringErrorTerm() {
+		//int size = Math.min(this.Error.d.length,this.Error.dP);
+		int size=9;
+		this.roundTo(size);
+
+		// System.out.println("this " + this+" d.length "+d.length +" dP "+dP);
+		// All the numbers come in as normalized UNumbers
+		String result = "";// initialize result to be empty string
+		// If fewer than 8 characters is requested, ignore the value and use 8 instead.
+		if (size <= 8)
+			size = 8;
+		int exp = this.Error.dP; // Reduce by one since we put the MSD to the
+
+		int ndx = 0;// represents the location
+		if (exp > 0 && exp <= 6) { // for numbers to the right of the decimal
+			while (ndx < this.Error.d.length && ndx < exp)
+				result += this.Error.d[ndx++]; // display all numbers until the decimal
+			while (ndx < exp) {// if not enough numbers provided fill in significant zeros
+				result += '0';
+				ndx++;
+			}
+			if (ndx < this.Error.d.length && ndx < size - 1)
+				result += '.';// add the decimal point
+			while (ndx < this.Error.d.length && ndx < size - 1)// keep going for all digits given or the size
+				result += this.Error.d[ndx++];
+			return result;// "± " + 
+		} else if (exp >= -3 && exp <= 0) {// always lead with a 0
+			result += "0.";
+			for (int neg = exp; neg < 0; neg++) // add significant zeros if not enough digits are provided
+				result += '0';
+
+			while (ndx < this.Error.d.length && ndx < size) // display the numbers until the end
+				result += this.Error.d[ndx++];
+
+			return result;//"± " + 
+		} else if (exp < -3 || exp > 6) {// do the exponents
+			result += this.Error.d[ndx++];
+			// result += ".";
+			while (ndx < this.Error.d.length) {
+				result += this.Error.d[ndx++];
+			}
+			result += "E";
+			if (exp < 0)
+				result += (exp - 1); // If the result is negative, the sign will automatically be inserted
+			else
+				result += "+" + (exp - 1); // For positive values, we must manually insert the "+" sign
+			return result;//"± " + 
+		} else
+			return null;
+	}
+
+	public String toString() {
+		return this.toStringBestEstimate() + " ± " + this.toStringErrorTerm();
+	}
+
+	public EnhancedUNumber getBestEstimate() {
+		return this.Value;
+	}
+
+	public boolean getBestEstimateSign() {
+		return this.Value.s;
+	}
+
+	public byte[] getBestEstimateMantissa() {
+		return this.Value.d;
+	}
+
+	public int getBestEstimateCharacteristic() {
+		return this.Value.dP;
+	}
+
+	public EnhancedUNumber getErrorTerm() {
+		return this.Error;
+	}
+
+	public byte[] getErrorTermMantissa() {
+		return this.Error.d;
+	}
+
+	public int getErrorTermCharacteristic() {
+		return this.Error.dP;
+	}
+
+}
